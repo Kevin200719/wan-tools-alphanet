@@ -1,0 +1,37 @@
+# === Variables de entorno y secretos ===
+.env
+.env.local
+.env.*.local
+*.env
+secrets/
+*.key
+*.pem
+*.p12
+*.pfx
+
+# === Configuraciones locales ===
+config.local.*
+*.log
+logs/
+
+# === Dependencias ===
+node_modules/
+vendor/
+__pycache__/
+*.pyc
+
+# === Sistema Operativo ===
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# === Editores ===
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# === Archivos temporales ===
+*.tmp
+*.bak
+*.cache

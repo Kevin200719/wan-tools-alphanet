@@ -1,0 +1,2166 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AlphaNet v0.4 - Network Command Center</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #0a0e17;
+            color: #e0e8f0;
+            padding: 20px;
+            line-height: 1.6;
+            min-height: 100vh;
+        }
+        .header {
+            border-bottom: 2px solid #00ffcc;
+            padding-bottom: 20px;
+            margin-bottom: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+        .header h1 {
+            font-size: 2.5rem;
+            color: #00ffcc;
+            text-shadow: 0 0 20px rgba(0,255,204,0.3);
+            letter-spacing: 3px;
+        }
+        .header .badge {
+            background: #00ffcc;
+            color: #0a0e17;
+            padding: 8px 16px;
+            border-radius: 4px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+        .header .version { color: #8899aa; font-size: 0.8rem; margin-top: 5px; }
+        .header .subtitle { color: #667788; font-size: 0.9rem; font-style: italic; }
+        .tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 25px;
+            border-bottom: 1px solid #1a2a33;
+            flex-wrap: wrap;
+        }
+        .tab {
+            background: transparent;
+            border: none;
+            color: #667788;
+            padding: 12px 20px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.85rem;
+            border-bottom: 3px solid transparent;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        .tab:hover { color: #00ffcc; background: rgba(0,255,204,0.05); }
+        .tab.active {
+            color: #00ffcc;
+            border-bottom-color: #00ffcc;
+            background: rgba(0,255,204,0.08);
+        }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .dashboard {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        .card {
+            background: linear-gradient(135deg, #111a22 0%, #0d1620 100%);
+            border: 1px solid #1a2a33;
+            border-radius: 12px;
+            padding: 20px;
+            transition: all 0.3s ease;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        .card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 3px;
+            background: linear-gradient(90deg, #00ffcc, #00ff88);
+            opacity: 0;
+            transition: opacity 0.3s ease;
+        }
+        .card:hover::before { opacity: 1; }
+        .card:hover {
+            border-color: #00ffcc;
+            box-shadow: 0 0 30px rgba(0,255,204,0.1);
+            transform: translateY(-2px);
+        }
+        .card .card-icon { font-size: 1.5rem; margin-bottom: 8px; }
+        .card .card-title {
+            color: #8899aa;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            margin-bottom: 5px;
+        }
+        .card .card-value { font-size: 2rem; font-weight: bold; color: #00ffcc; }
+        .card .card-sub { color: #667788; font-size: 0.8rem; margin-top: 5px; }
+        .card .card-help {
+            color: #445566;
+            font-size: 0.7rem;
+            margin-top: 8px;
+            border-top: 1px solid #1a2a33;
+            padding-top: 8px;
+            font-style: italic;
+        }
+        .status-indicator {
+            display: inline-block;
+            width: 10px; height: 10px;
+            border-radius: 50%;
+            margin-right: 8px;
+        }
+        .status-green { background: #00ff88; box-shadow: 0 0 15px #00ff88; }
+        .status-yellow { background: #ffcc00; box-shadow: 0 0 15px #ffcc00; }
+        .status-red { background: #ff3344; box-shadow: 0 0 15px #ff3344; }
+        .latency-section {
+            background: #111a22;
+            border: 1px solid #1a2a33;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+        }
+        .section-title {
+            color: #00ffcc;
+            font-size: 1.2rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+        .latency-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .latency-item {
+            background: #0d1620;
+            border-radius: 8px;
+            padding: 15px;
+            text-align: center;
+            border: 1px solid #1a2a33;
+            transition: all 0.3s ease;
+        }
+        .latency-item:hover { border-color: #00ffcc; transform: scale(1.02); }
+        .latency-item .device-name { color: #8899aa; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 1px; }
+        .latency-item .latency-value { font-size: 1.8rem; font-weight: bold; margin: 5px 0; }
+        .latency-item .latency-unit { color: #667788; font-size: 0.7rem; }
+        .latency-item .latency-bar { width: 100%; height: 4px; background: #1a2a33; border-radius: 2px; margin-top: 8px; overflow: hidden; }
+        .latency-item .latency-bar .fill { height: 100%; border-radius: 2px; transition: width 1s ease; }
+        .latency-good .latency-value { color: #00ff88; }
+        .latency-good .fill { background: #00ff88; }
+        .latency-medium .latency-value { color: #ffcc00; }
+        .latency-medium .fill { background: #ffcc00; }
+        .latency-bad .latency-value { color: #ff3344; }
+        .latency-bad .fill { background: #ff3344; }
+        .latency-general {
+            text-align: center;
+            padding: 15px;
+            background: #0d1620;
+            border-radius: 8px;
+            border: 1px solid #1a2a33;
+        }
+        .latency-general .label { color: #8899aa; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 1px; }
+        .latency-general .value { font-size: 2.5rem; font-weight: bold; color: #00ffcc; margin: 5px 0; }
+        .latency-general .status-text { color: #667788; font-size: 0.9rem; }
+        .terminal {
+            background: #060b10;
+            border: 1px solid #1a2a33;
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 30px;
+            font-family: 'Courier New', monospace;
+            max-height: 250px;
+            overflow-y: auto;
+            min-height: 150px;
+        }
+        .terminal .line {
+            color: #00ffcc;
+            padding: 2px 0;
+            font-size: 0.85rem;
+            animation: fadeIn 0.3s ease;
+        }
+        .terminal .line .prompt { color: #ffcc00; }
+        .terminal .line .info { color: #66aacc; }
+        .terminal .line .success { color: #00ff88; }
+        .terminal .line .error { color: #ff3344; }
+        .terminal .line .warning { color: #ffcc00; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateX(-10px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .table-container {
+            background: #111a22;
+            border: 1px solid #1a2a33;
+            border-radius: 12px;
+            overflow: hidden;
+            margin-bottom: 30px;
+        }
+        .table-container table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+        .table-container th {
+            background: #0d1620;
+            color: #00ffcc;
+            padding: 12px 15px;
+            text-align: left;
+            font-weight: normal;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-size: 0.7rem;
+            border-bottom: 1px solid #1a2a33;
+        }
+        .table-container td { padding: 12px 15px; border-bottom: 1px solid #0d1620; color: #aabbcc; }
+        .table-container tr:hover td { background: #0d1620; }
+        .vendor-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+            font-weight: bold;
+        }
+        .tag-cisco { background: #1a3a5a; color: #66ccff; }
+        .tag-huawei { background: #3a1a2a; color: #ff6688; }
+        .tag-tplink { background: #2a3a1a; color: #88ff66; }
+        .tag-fortinet { background: #3a1a1a; color: #ff8888; }
+        .tag-mikrotik { background: #2a2a3a; color: #aaaaff; }
+        .tag-generic { background: #2a2a3a; color: #aaaadd; }
+        .status-badge {
+            display: inline-block;
+            padding: 2px 10px;
+            border-radius: 12px;
+            font-size: 0.7rem;
+        }
+        .status-online { background: #003322; color: #00ff88; }
+        .status-warning { background: #332200; color: #ffcc00; }
+        .status-offline { background: #330011; color: #ff3344; }
+        .btn-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin: 20px 0 30px 0;
+        }
+        .btn-wrapper { position: relative; display: flex; flex-direction: column; }
+        .btn {
+            background: transparent;
+            border: 1px solid #00ffcc;
+            color: #00ffcc;
+            padding: 12px 20px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-family: inherit;
+            font-size: 0.9rem;
+            transition: all 0.3s ease;
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            width: 100%;
+        }
+        .btn .btn-icon { font-size: 1.2rem; }
+        .btn .btn-text { flex: 1; }
+        .btn .btn-description {
+            display: none;
+            position: absolute;
+            bottom: calc(100% + 10px);
+            left: 0;
+            background: #0d1620;
+            border: 1px solid #00ffcc;
+            border-radius: 8px;
+            padding: 12px 15px;
+            font-size: 0.8rem;
+            color: #aabbcc;
+            z-index: 100;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.8);
+            width: 300px;
+            max-width: 90vw;
+        }
+        .btn .btn-description::after {
+            content: '';
+            position: absolute;
+            top: 100%;
+            left: 20px;
+            border: 8px solid transparent;
+            border-top-color: #00ffcc;
+        }
+        .btn .btn-description .desc-title { color: #00ffcc; font-weight: bold; margin-bottom: 5px; }
+        .btn .btn-description .desc-example {
+            color: #667788;
+            font-size: 0.7rem;
+            margin-top: 5px;
+            font-family: 'Courier New', monospace;
+            background: #060b10;
+            padding: 5px 8px;
+            border-radius: 4px;
+        }
+        .btn:hover .btn-description { display: block; }
+        .btn:hover {
+            background: #00ffcc;
+            color: #0a0e17;
+            box-shadow: 0 0 30px rgba(0,255,204,0.2);
+            transform: scale(1.02);
+        }
+        .btn:active { transform: scale(0.95); }
+        .btn-danger { border-color: #ff3344; color: #ff3344; }
+        .btn-danger:hover { background: #ff3344; color: #0a0e17; }
+        .btn-danger .btn-description { border-color: #ff3344; }
+        .btn-danger .btn-description::after { border-top-color: #ff3344; }
+        .btn-warning { border-color: #ffcc00; color: #ffcc00; }
+        .btn-warning:hover { background: #ffcc00; color: #0a0e17; }
+        .btn-warning .btn-description { border-color: #ffcc00; }
+        .btn-warning .btn-description::after { border-top-color: #ffcc00; }
+        .btn-success { border-color: #00ff88; color: #00ff88; }
+        .btn-success:hover { background: #00ff88; color: #0a0e17; }
+        .btn-success .btn-description { border-color: #00ff88; }
+        .btn-success .btn-description::after { border-top-color: #00ff88; }
+        .btn-small { padding: 4px 12px; font-size: 0.7rem; }
+        .config-layout {
+            display: grid;
+            grid-template-columns: 320px 1fr;
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        .config-sidebar {
+            background: #111a22;
+            border: 1px solid #1a2a33;
+            border-radius: 12px;
+            padding: 20px;
+            height: fit-content;
+        }
+        .config-main {
+            background: #111a22;
+            border: 1px solid #1a2a33;
+            border-radius: 12px;
+            padding: 20px;
+        }
+        .config-sidebar h3, .config-main h3 {
+            color: #00ffcc;
+            font-size: 1rem;
+            margin-bottom: 15px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid #1a2a33;
+            padding-bottom: 10px;
+        }
+        .form-group { margin-bottom: 15px; }
+        .form-group label {
+            display: block;
+            color: #8899aa;
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+        }
+        .form-group select, .form-group input, .form-group textarea {
+            width: 100%;
+            background: #0d1620;
+            border: 1px solid #1a2a33;
+            color: #e0e8f0;
+            padding: 10px 12px;
+            border-radius: 6px;
+            font-family: inherit;
+            font-size: 0.85rem;
+            transition: border-color 0.3s ease;
+        }
+        .form-group select:focus, .form-group input:focus, .form-group textarea:focus {
+            outline: none;
+            border-color: #00ffcc;
+            box-shadow: 0 0 10px rgba(0,255,204,0.2);
+        }
+        .form-group textarea {
+            font-family: 'Courier New', monospace;
+            min-height: 100px;
+            resize: vertical;
+        }
+        .info-box {
+            background: #0d1620;
+            border: 1px solid #1a2a33;
+            border-left: 3px solid #00ffcc;
+            border-radius: 6px;
+            padding: 12px;
+            margin-bottom: 15px;
+            font-size: 0.8rem;
+            color: #aabbcc;
+        }
+        .info-box strong { color: #00ffcc; }
+        .config-tabs {
+            display: flex;
+            gap: 5px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+        .config-tab {
+            background: #0d1620;
+            border: 1px solid #1a2a33;
+            color: #667788;
+            padding: 8px 16px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .config-tab:hover { color: #00ffcc; border-color: #00ffcc; }
+        .config-tab.active {
+            background: #00ffcc;
+            color: #0a0e17;
+            border-color: #00ffcc;
+            font-weight: bold;
+        }
+        .config-panel { display: none; }
+        .config-panel.active { display: block; }
+        .code-preview {
+            background: #060b10;
+            border: 1px solid #1a2a33;
+            border-radius: 8px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.8rem;
+            color: #00ff88;
+            max-height: 400px;
+            overflow-y: auto;
+            white-space: pre;
+            line-height: 1.5;
+            margin-top: 15px;
+        }
+        .vendor-selector {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+            margin-bottom: 15px;
+        }
+        .vendor-btn {
+            background: #0d1620;
+            border: 1px solid #1a2a33;
+            color: #667788;
+            padding: 10px 8px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.75rem;
+            text-align: center;
+            transition: all 0.3s ease;
+            font-family: inherit;
+        }
+        .vendor-btn:hover { border-color: #00ffcc; color: #00ffcc; }
+        .vendor-btn.active {
+            background: #00ffcc;
+            color: #0a0e17;
+            border-color: #00ffcc;
+            font-weight: bold;
+        }
+        .vlan-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.8rem;
+        }
+        .vlan-table th {
+            background: #0d1620;
+            color: #00ffcc;
+            padding: 8px;
+            text-align: left;
+            font-weight: normal;
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .vlan-table td { padding: 8px; border-bottom: 1px solid #1a2a33; color: #aabbcc; }
+        .vlan-table input {
+            background: #060b10;
+            border: 1px solid #1a2a33;
+            color: #e0e8f0;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            width: 100%;
+        }
+        .vlan-table input:focus { outline: none; border-color: #00ffcc; }
+        .btn-add {
+            background: #003322;
+            border: 1px solid #00ff88;
+            color: #00ff88;
+            padding: 6px 15px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            margin-top: 10px;
+            font-family: inherit;
+            transition: all 0.3s ease;
+        }
+        .btn-add:hover { background: #00ff88; color: #0a0e17; }
+        .btn-remove {
+            background: #330011;
+            border: 1px solid #ff3344;
+            color: #ff3344;
+            padding: 4px 10px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-family: inherit;
+        }
+        .btn-remove:hover { background: #ff3344; color: #0a0e17; }
+        .action-bar {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            flex-wrap: wrap;
+            padding-top: 20px;
+            border-top: 1px solid #1a2a33;
+        }
+        .action-bar .btn { flex: 1; min-width: 150px; justify-content: center; }
+        .template-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .template-card {
+            background: #0d1620;
+            border: 1px solid #1a2a33;
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        .template-card:hover {
+            border-color: #00ffcc;
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(0,255,204,0.15);
+        }
+        .template-card .template-icon { font-size: 1.8rem; margin-bottom: 8px; }
+        .template-card .template-name { color: #00ffcc; font-weight: bold; margin-bottom: 5px; font-size: 0.95rem; }
+        .template-card .template-desc { color: #667788; font-size: 0.75rem; line-height: 1.4; }
+        .template-card .template-vendor {
+            margin-top: 8px;
+            font-size: 0.7rem;
+            color: #445566;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        .alert {
+            padding: 12px 15px;
+            border-radius: 6px;
+            margin-bottom: 15px;
+            font-size: 0.85rem;
+        }
+        .alert-info { background: #0d2a2a; border-left: 3px solid #00ffcc; color: #88eeee; }
+        .alert-success { background: #0d2a0d; border-left: 3px solid #00ff88; color: #88ff88; }
+        .alert-warning { background: #2a2a0d; border-left: 3px solid #ffcc00; color: #ffee88; }
+        .alert-danger { background: #2a0d0d; border-left: 3px solid #ff3344; color: #ff8888; }
+        .result-box {
+            background: #0d1620;
+            border: 1px solid #1a2a33;
+            border-left: 3px solid #00ff88;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.85rem;
+        }
+        .result-box .label { color: #8899aa; }
+        .result-box .value { color: #00ff88; font-weight: bold; }
+        .footer {
+            border-top: 1px solid #1a2a33;
+            padding-top: 20px;
+            margin-top: 30px;
+            color: #445566;
+            font-size: 0.8rem;
+            display: flex;
+            justify-content: space-between;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .footer .highlight { color: #00ffcc; }
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: #0a0e17; }
+        ::-webkit-scrollbar-thumb { background: #1a2a33; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00ffcc; }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+        .modal.active { display: flex; }
+        .modal-content {
+            background: #111a22;
+            border: 1px solid #00ffcc;
+            border-radius: 12px;
+            padding: 30px;
+            max-width: 700px;
+            width: 90%;
+            max-height: 85vh;
+            overflow-y: auto;
+        }
+        .modal-content h2 { color: #00ffcc; margin-bottom: 15px; }
+        .modal-content p { color: #aabbcc; margin-bottom: 10px; }
+        .modal-close {
+            margin-top: 20px;
+            width: 100%;
+            justify-content: center;
+        }
+        @media (max-width: 900px) {
+            .config-layout { grid-template-columns: 1fr; }
+            .vendor-selector { grid-template-columns: repeat(2, 1fr); }
+        }
+        @media (max-width: 768px) {
+            .header h1 { font-size: 1.8rem; }
+            .dashboard { grid-template-columns: 1fr; }
+            .table-container { overflow-x: auto; }
+            .btn-group { grid-template-columns: 1fr; }
+            .footer { flex-direction: column; text-align: center; }
+            .tab { padding: 10px 14px; font-size: 0.8rem; }
+        }
+    </style>
+</head>
+<body>
+
+<!-- ============================================================
+     MODAL GENÉRICO (debe existir desde el inicio)
+     ============================================================ -->
+<div class="modal" id="infoModal">
+    <div class="modal-content">
+        <h2 id="modalTitle">Información</h2>
+        <div id="modalBody"></div>
+        <button class="btn modal-close" onclick="closeModal()" style="justify-content:center;">Cerrar</button>
+    </div>
+</div>
+
+<!-- ============================================================
+     HEADER
+     ============================================================ -->
+<header class="header">
+    <div>
+        <h1>⧩ ALPHANET</h1>
+        <div class="version">Network Command Center · v0.4 (Corte 2)</div>
+        <div class="subtitle">✨ Diseño, configuración y ciberdefensa de redes WAN</div>
+    </div>
+    <div>
+        <span class="badge" id="systemStatus">● SISTEMA ACTIVO</span>
+        <div style="margin-top:8px; color:#667788; font-size:0.75rem;">
+            Última actualización: <span id="lastUpdate">2026-08-19 14:32:07</span>
+        </div>
+    </div>
+</header>
+
+<!-- ============================================================
+     NAVEGACIÓN POR PESTAÑAS
+     ============================================================ -->
+<nav class="tabs">
+    <button class="tab active" onclick="switchTab('dashboard', this)"><span>📊</span> Dashboard</button>
+    <button class="tab" onclick="switchTab('config', this)"><span>⚙️</span> Configuración</button>
+    <button class="tab" onclick="switchTab('templates', this)"><span>📋</span> Plantillas</button>
+    <button class="tab" onclick="switchTab('deploy', this)"><span>🚀</span> Desplegar</button>
+    <button class="tab" onclick="switchTab('subnetting', this)"><span>📐</span> Subnetting</button>
+    <button class="tab" onclick="switchTab('topology', this)"><span>🗺️</span> Topología WAN</button>
+    <button class="tab" onclick="switchTab('cyber', this)"><span>🛡️</span> Ciberdefensa IA</button>
+</nav>
+
+<!-- ============================================================
+     PESTAÑA 1: DASHBOARD
+     ============================================================ -->
+<div id="tab-dashboard" class="tab-content active">
+    <section class="dashboard">
+        <div class="card" onclick="showDeviceInfo()">
+            <div class="card-icon">🖥️</div>
+            <div class="card-title">Dispositivos gestionados</div>
+            <div class="card-value" id="totalDevices">0</div>
+            <div class="card-sub">
+                <span class="status-indicator status-green"></span> <span id="onlineCount">0</span> activos
+                <span style="margin-left:15px;">
+                    <span class="status-indicator status-yellow"></span> <span id="warningCount">0</span> alertas
+                </span>
+                <span style="margin-left:15px;">
+                    <span class="status-indicator status-red"></span> <span id="offlineCount">0</span> inactivos
+                </span>
+            </div>
+            <div class="card-help">💡 Haz clic para ver el estado detallado</div>
+        </div>
+
+        <div class="card" onclick="showVendorInfo()">
+            <div class="card-icon">🏭</div>
+            <div class="card-title">Fabricantes</div>
+            <div class="card-value" style="font-size:1.1rem;">
+                <span style="color:#66ccff;">Cisco</span> ·
+                <span style="color:#ff6688;">Huawei</span> ·
+                <span style="color:#88ff66;">TP-Link</span> ·
+                <span style="color:#ff8888;">Fortinet</span> ·
+                <span style="color:#aaaaff;">MikroTik</span>
+            </div>
+            <div class="card-sub">Multi-vendor · 5 marcas soportadas</div>
+            <div class="card-help">💡 Haz clic para ver la distribución</div>
+        </div>
+
+        <div class="card" onclick="showProtocolInfo()">
+            <div class="card-icon">🔌</div>
+            <div class="card-title">Protocolos activos</div>
+            <div class="card-value" style="font-size:1.1rem;">NETCONF · RESTCONF · SSH</div>
+            <div class="card-sub">🔐 Seguridad AES-256 · TLS 1.3</div>
+            <div class="card-help">💡 Haz clic para ver el detalle</div>
+        </div>
+
+        <div class="card" onclick="showBandwidthInfo()">
+            <div class="card-icon">📶</div>
+            <div class="card-title">Ancho de banda</div>
+            <div class="card-value">1.2 Tbps</div>
+            <div class="card-sub">
+                <span style="color:#00ff88;">▲</span> 34% usado
+                <span style="margin-left:15px; color:#667788;">|</span>
+                <span style="color:#ffcc00;">⚠</span> 2 enlaces al 85%
+            </div>
+            <div class="card-help">💡 Haz clic para más detalles</div>
+        </div>
+    </section>
+
+    <section class="latency-section">
+        <div class="section-title">
+            ⏱️ LATENCIA DE RED
+            <span style="font-size:0.8rem; color:#667788; font-weight:normal;">
+                — Tiempo de respuesta por dispositivo
+            </span>
+        </div>
+        <div class="latency-grid" id="latencyGrid"></div>
+        <div class="latency-general">
+            <div class="label">📊 LATENCIA PROMEDIO GENERAL</div>
+            <div class="value" id="avgLatency">0 ms</div>
+            <div class="status-text" id="latencyStatus">Calculando...</div>
+        </div>
+    </section>
+
+    <section class="terminal" id="terminal">
+        <div class="line">
+            <span class="prompt">[alpha@orchestrator]</span>
+            <span class="info">$</span> Sistema AlphaNet v0.4 inicializado
+        </div>
+    </section>
+
+    <section class="table-container">
+        <table>
+            <thead>
+                <tr>
+                    <th>Dispositivo</th>
+                    <th>Modelo</th>
+                    <th>Fabricante</th>
+                    <th>IP</th>
+                    <th>Rol</th>
+                    <th>Estado</th>
+                    <th>Latencia</th>
+                    <th>Acción</th>
+                </tr>
+            </thead>
+            <tbody id="deviceTableBody"></tbody>
+        </table>
+    </section>
+
+    <section class="btn-group">
+        <div class="btn-wrapper">
+            <button class="btn btn-success" onclick="executeAction('deploy')">
+                <span class="btn-icon">▶</span>
+                <span class="btn-text">Desplegar configuración</span>
+                <span class="btn-description">
+                    <div class="desc-title">📋 ¿Qué hace?</div>
+                    Aplica configuraciones a todos los dispositivos automáticamente.
+                </span>
+            </button>
+        </div>
+        <div class="btn-wrapper">
+            <button class="btn btn-warning" onclick="executeAction('audit')">
+                <span class="btn-icon">🔍</span>
+                <span class="btn-text">Auditoría de seguridad</span>
+                <span class="btn-description">
+                    <div class="desc-title">🛡️ ¿Qué hace?</div>
+                    Verifica cumplimiento de políticas de seguridad.
+                </span>
+            </button>
+        </div>
+        <div class="btn-wrapper">
+            <button class="btn btn-success" onclick="executeAction('backup')">
+                <span class="btn-icon">💾</span>
+                <span class="btn-text">Backup de configuraciones</span>
+                <span class="btn-description">
+                    <div class="desc-title">💿 ¿Qué hace?</div>
+                    Guarda copia de seguridad de todos los dispositivos.
+                </span>
+            </button>
+        </div>
+        <div class="btn-wrapper">
+            <button class="btn btn-danger" onclick="executeAction('rollback')">
+                <span class="btn-icon">↩</span>
+                <span class="btn-text">Rollback urgente</span>
+                <span class="btn-description">
+                    <div class="desc-title">⚠️ ¿Qué hace?</div>
+                    Revierte cambios recientes si algo salió mal.
+                </span>
+            </button>
+        </div>
+    </section>
+</div>
+
+<!-- ============================================================
+     PESTAÑA 2: CONFIGURACIÓN
+     ============================================================ -->
+<div id="tab-config" class="tab-content">
+    <div class="config-layout">
+        <aside class="config-sidebar">
+            <h3>🎯 Selección de Dispositivo</h3>
+            <div class="form-group">
+                <label>Fabricante</label>
+                <div class="vendor-selector">
+                    <button class="vendor-btn active" onclick="selectVendor('CISCO', this)">CISCO</button>
+                    <button class="vendor-btn" onclick="selectVendor('HUAWEI', this)">HUAWEI</button>
+                    <button class="vendor-btn" onclick="selectVendor('TPLINK', this)">TP-LINK</button>
+                    <button class="vendor-btn" onclick="selectVendor('FORTINET', this)">FORTINET</button>
+                    <button class="vendor-btn" onclick="selectVendor('MIKROTIK', this)">MIKROTIK</button>
+                </div>
+            </div>
+            <div class="form-group">
+                <label>Tipo de Dispositivo</label>
+                <select id="deviceType" onchange="updateModelList()">
+                    <option value="router">🔀 Router</option>
+                    <option value="switch-l2">🔗 Switch Capa 2</option>
+                    <option value="switch-l3" selected>🎯 Switch Capa 3</option>
+                    <option value="firewall">🛡️ Firewall</option>
+                    <option value="ap">📡 Access Point</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Modelo Específico</label>
+                <select id="deviceModel"><option>Seleccione modelo...</option></select>
+            </div>
+            <div class="info-box">
+                <strong>💡 Modo de trabajo:</strong><br>
+                <span id="vendorInfo">Seleccione un fabricante y tipo de dispositivo.</span>
+            </div>
+            <div class="form-group">
+                <label>Nombre del Dispositivo</label>
+                <input type="text" id="cfgHostname" value="SW-CORE-01">
+            </div>
+        </aside>
+
+        <main class="config-main">
+            <h3>⚙️ Configuración del Equipo</h3>
+            <div class="config-tabs">
+                <button class="config-tab active" onclick="switchConfigPanel('general', this)">📋 General</button>
+                <button class="config-tab" onclick="switchConfigPanel('vlans', this)">🔗 VLANs</button>
+                <button class="config-tab" onclick="switchConfigPanel('interfaces', this)">🔌 Interfaces</button>
+                <button class="config-tab" onclick="switchConfigPanel('routing', this)">🛣️ Routing</button>
+                <button class="config-tab" onclick="switchConfigPanel('security', this)">🛡️ Seguridad</button>
+                <button class="config-tab" onclick="switchConfigPanel('preview', this)">👁️ Vista Previa</button>
+            </div>
+
+            <div id="panel-general" class="config-panel active">
+                <div class="info-box">
+                    <strong>📋 Configuración General</strong><br>
+                    Parámetros básicos: hostname, dominio, DNS, NTP.
+                </div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group"><label>Dominio</label><input type="text" id="cfgDomain" value="empresa.local"></div>
+                    <div class="form-group"><label>Servidor NTP</label><input type="text" id="cfgNTP" value="pool.ntp.org"></div>
+                    <div class="form-group"><label>DNS Primario</label><input type="text" id="cfgDNS1" value="8.8.8.8"></div>
+                    <div class="form-group"><label>DNS Secundario</label><input type="text" id="cfgDNS2" value="8.8.4.4"></div>
+                </div>
+                <div class="form-group"><label>Usuario Administrador</label><input type="text" id="cfgAdminUser" value="admin"></div>
+                <div class="form-group"><label>Banner / Descripción</label><textarea id="cfgBanner">Acceso restringido solo a personal autorizado</textarea></div>
+            </div>
+
+            <div id="panel-vlans" class="config-panel">
+                <div class="info-box"><strong>🔗 VLANs</strong><br>Defina las VLANs del switch.</div>
+                <table class="vlan-table">
+                    <thead><tr><th style="width:80px;">VLAN ID</th><th>Nombre</th><th>Descripción</th><th style="width:80px;">Acción</th></tr></thead>
+                    <tbody id="vlanTableBody"></tbody>
+                </table>
+                <button class="btn-add" onclick="addVlanRow()">+ Agregar VLAN</button>
+            </div>
+
+            <div id="panel-interfaces" class="config-panel">
+                <div class="info-box"><strong>🔌 Interfaces</strong><br>Modo Access o Trunk.</div>
+                <table class="vlan-table">
+                    <thead><tr><th style="width:100px;">Interfaz</th><th style="width:120px;">Modo</th><th>VLAN(s)</th><th>Descripción</th></tr></thead>
+                    <tbody id="interfaceTableBody"></tbody>
+                </table>
+                <button class="btn-add" onclick="addInterfaceRow()">+ Agregar Interfaz</button>
+            </div>
+
+            <div id="panel-routing" class="config-panel">
+                <div class="info-box"><strong>🛣️ Routing</strong><br>Protocolos de enrutamiento y encapsulamiento WAN.</div>
+                <div class="form-group">
+                    <label>Protocolo de Enrutamiento</label>
+                    <select id="cfgRouting">
+                        <option value="ospf">OSPF</option>
+                        <option value="bgp">BGP</option>
+                        <option value="static">Estático</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Encapsulamiento WAN</label>
+                    <select id="cfgEncapsulation">
+                        <option value="dot1q">802.1Q</option>
+                        <option value="ppp">PPP</option>
+                        <option value="hdlc">HDLC</option>
+                        <option value="mpls">MPLS</option>
+                        <option value="none">Ninguno</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Área OSPF / AS BGP</label><input type="text" id="cfgRoutingArea" value="0.0.0.0"></div>
+                <div class="form-group"><label>Redes a Anunciar</label><input type="text" id="cfgNetworks" value="10.0.0.0/24, 10.0.1.0/24"></div>
+            </div>
+
+            <div id="panel-security" class="config-panel">
+                <div class="info-box"><strong>🛡️ Seguridad</strong><br>Políticas de acceso y hardening.</div>
+                <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+                    <div class="form-group">
+                        <label>802.1X</label>
+                        <select id="cfgDot1x"><option value="enabled">Habilitado</option><option value="disabled">Deshabilitado</option></select>
+                    </div>
+                    <div class="form-group"><label>Servidor RADIUS</label><input type="text" id="cfgRadius" value="10.0.0.50"></div>
+                    <div class="form-group">
+                        <label>SSH versión</label>
+                        <select id="cfgSSH"><option value="v2">SSH v2</option><option value="v1v2">SSH v1 y v2</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Telnet</label>
+                        <select id="cfgTelnet"><option value="disabled">🚫 Deshabilitado</option><option value="enabled">Habilitado</option></select>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>ACLs Básicas</label>
+                    <textarea id="cfgACL">permit tcp any any eq 22
+permit tcp any any eq 443
+deny ip any any log</textarea>
+                </div>
+            </div>
+
+            <div id="panel-preview" class="config-panel">
+                <div class="info-box"><strong>👁️ Vista Previa</strong><br>Sintaxis generada según el fabricante.</div>
+                <button class="btn btn-success" onclick="generateConfig()" style="width:100%; justify-content:center; margin-bottom:15px;">
+                    ⚡ Generar Configuración
+                </button>
+                <div class="code-preview" id="codePreview">Haga clic en "Generar Configuración" para ver la sintaxis generada.</div>
+            </div>
+
+            <div class="action-bar">
+                <button class="btn btn-success" onclick="generateConfig()"><span class="btn-icon">⚡</span><span class="btn-text">Generar</span></button>
+                <button class="btn btn-warning" onclick="validateConfig()"><span class="btn-icon">✓</span><span class="btn-text">Validar</span></button>
+                <button class="btn" onclick="saveTemplate()"><span class="btn-icon">💾</span><span class="btn-text">Guardar</span></button>
+                <button class="btn btn-danger" onclick="clearConfig()"><span class="btn-icon">🗑️</span><span class="btn-text">Limpiar</span></button>
+            </div>
+        </main>
+    </div>
+</div>
+
+<!-- ============================================================
+     PESTAÑA 3: PLANTILLAS
+     ============================================================ -->
+<div id="tab-templates" class="tab-content">
+    <div class="config-main">
+        <h3>📋 Biblioteca de Plantillas</h3>
+        <div class="info-box">
+            <strong>💡 ¿Qué son?</strong><br>
+            Configuraciones predefinidas listas para usar. Haz clic para cargarlas.
+        </div>
+        <div class="template-grid" id="templateGrid"></div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PESTAÑA 4: DESPLIEGUE
+     ============================================================ -->
+<div id="tab-deploy" class="tab-content">
+    <div class="config-main">
+        <h3>🚀 Despliegue de Configuraciones</h3>
+        <div class="info-box">
+            <strong>⚠️ Importante:</strong><br>
+            Revise siempre la vista previa antes de aplicar. El sistema hará un backup automático.
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-top: 20px;">
+            <div class="card" style="cursor:pointer;" onclick="deployAction('single')">
+                <div class="card-icon">🎯</div>
+                <div class="card-title">1 dispositivo</div>
+                <div class="card-sub">Aplicar a un dispositivo específico</div>
+            </div>
+            <div class="card" style="cursor:pointer;" onclick="deployAction('group')">
+                <div class="card-icon">📦</div>
+                <div class="card-title">Grupo</div>
+                <div class="card-sub">Aplicar a varios dispositivos similares</div>
+            </div>
+            <div class="card" style="cursor:pointer;" onclick="deployAction('massive')">
+                <div class="card-icon">🌐</div>
+                <div class="card-title">Masivo</div>
+                <div class="card-sub">Aplicar a toda la topología</div>
+            </div>
+            <div class="card" style="cursor:pointer;" onclick="deployAction('schedule')">
+                <div class="card-icon">⏰</div>
+                <div class="card-title">Programado</div>
+                <div class="card-sub">Ventana de mantenimiento</div>
+            </div>
+        </div>
+        <div class="terminal" id="deployTerminal" style="margin-top: 25px;">
+            <div class="line"><span class="prompt">[deploy@orchestrator]</span><span class="info">$</span> Sistema de despliegue listo</div>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PESTAÑA 5: SUBNETTING
+     ============================================================ -->
+<div id="tab-subnetting" class="tab-content">
+    <div class="config-main">
+        <h3>📐 Calculadora de Subnetting IPv4</h3>
+        <div class="alert alert-info">
+            <strong>💡 ¿Qué hace?</strong> Introduce una IP con prefijo (ej: 192.168.1.10/24) y obtendrás todos los datos: máscara, red, broadcast, rango de hosts.
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+                <label>Dirección IP con Prefijo (CIDR)</label>
+                <input type="text" id="ipInput" value="192.168.1.10/24">
+            </div>
+            <div class="form-group">
+                <label>Acción</label>
+                <button class="btn btn-success" onclick="calcularSubnetting()" style="width:100%;">🧮 Calcular Subred</button>
+            </div>
+        </div>
+        <div id="subnetResults"></div>
+
+        <h3 style="margin-top:30px;">📊 Plan de Direccionamiento (VLSM)</h3>
+        <div class="alert alert-info">
+            <strong>💡 Genera subredes automáticamente</strong> para distintos departamentos.
+        </div>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group"><label>Red Base</label><input type="text" id="vlsmBase" value="192.168.1.0/24"></div>
+            <div class="form-group"><label>Hosts Necesarios (separados por coma)</label><input type="text" id="vlsmHosts" value="50, 25, 10, 5, 2"></div>
+        </div>
+        <button class="btn btn-success" onclick="calcularVLSM()">📊 Generar Plan VLSM</button>
+        <div id="vlsmResults"></div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PESTAÑA 6: TOPOLOGÍA WAN
+     ============================================================ -->
+<div id="tab-topology" class="tab-content">
+    <div class="config-main">
+        <h3>🗺️ Carga de Topología WAN</h3>
+        <div class="alert alert-info">
+            <strong>💡 Cómo usar:</strong> Agrega dispositivos manualmente o carga la topología demo. Luego podrás generar configuraciones.
+        </div>
+        <div style="display:grid; grid-template-columns: repeat(3, 1fr); gap: 15px;">
+            <div class="form-group"><label>Nombre del Dispositivo</label><input type="text" id="topoName" placeholder="Ej: ROUTER-CORE-01"></div>
+            <div class="form-group">
+                <label>Fabricante</label>
+                <select id="topoVendor">
+                    <option value="CISCO">Cisco</option>
+                    <option value="HUAWEI">Huawei</option>
+                    <option value="TPLINK">TP-Link</option>
+                    <option value="FORTINET">Fortinet</option>
+                    <option value="MIKROTIK">MikroTik</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Tipo</label>
+                <select id="topoType">
+                    <option value="router">Router</option>
+                    <option value="switch">Switch</option>
+                    <option value="firewall">Firewall</option>
+                    <option value="ap">Access Point</option>
+                </select>
+            </div>
+            <div class="form-group"><label>IP de Gestión</label><input type="text" id="topoIP" placeholder="Ej: 10.0.0.1"></div>
+            <div class="form-group"><label>WAN IP / Prefijo</label><input type="text" id="topoWAN" placeholder="Ej: 200.1.1.1/30"></div>
+            <div class="form-group"><label>LAN IP / Prefijo</label><input type="text" id="topoLAN" placeholder="Ej: 192.168.1.1/24"></div>
+        </div>
+        <button class="btn btn-success" onclick="addDeviceToTopology()">➕ Agregar Dispositivo</button>
+        <button class="btn btn-warning" onclick="loadDemoTopology()">📋 Cargar Topología Demo</button>
+        <button class="btn btn-danger" onclick="clearTopology()">🗑️ Limpiar Topología</button>
+        <div id="topologyTable" style="margin-top:20px;"></div>
+
+        <h3 style="margin-top:30px;">⚙️ Generar Configuración desde Topología</h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+                <label>Dispositivo</label>
+                <select id="configDevice"><option value="">Cargue primero una topología...</option></select>
+            </div>
+            <div class="form-group">
+                <label>Protocolo Routing</label>
+                <select id="configRouting">
+                    <option value="ospf">OSPF</option>
+                    <option value="bgp">BGP</option>
+                    <option value="static">Estático</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Acción</label>
+                <button class="btn btn-success" onclick="generateConfigFromTopology()" style="width:100%;">⚡ Generar</button>
+            </div>
+        </div>
+        <div class="code-preview" id="configOutput">Seleccione un dispositivo y haga clic en "Generar"...</div>
+        <div style="margin-top:15px;">
+            <button class="btn btn-warning" onclick="copyConfig()">📋 Copiar</button>
+            <button class="btn" onclick="downloadConfig()">💾 Descargar .txt</button>
+        </div>
+    </div>
+</div>
+
+<!-- ============================================================
+     PESTAÑA 7: CIBERDEFENSA IA
+     ============================================================ -->
+<div id="tab-cyber" class="tab-content">
+    <div class="config-main">
+        <h3>🛡️ Ciberdefensa contra IA</h3>
+        <div class="alert alert-warning">
+            <strong>⚠️ Importante:</strong> Analiza la topología cargada y aplica contramedidas contra amenazas potenciadas por IA.
+        </div>
+        <h3>🔍 Análisis de Amenazas</h3>
+        <div style="display:grid; grid-template-columns: 1fr 1fr; gap: 15px;">
+            <div class="form-group">
+                <label>Tipo de Amenaza</label>
+                <select id="threatType">
+                    <option value="ai-recon">Reconocimiento con IA</option>
+                    <option value="ai-ddos">DDoS adaptativo con IA</option>
+                    <option value="ai-phishing">Phishing generativo con IA</option>
+                    <option value="ai-malware">Malware polimórfico con IA</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Nivel de Riesgo</label>
+                <select id="threatLevel">
+                    <option value="low">Bajo</option>
+                    <option value="medium" selected>Medio</option>
+                    <option value="high">Alto</option>
+                    <option value="critical">Crítico</option>
+                </select>
+            </div>
+        </div>
+        <button class="btn btn-danger" onclick="analyzeThreat()">🔍 Analizar Amenaza</button>
+        <button class="btn btn-success" onclick="applyCountermeasures()">🛡️ Aplicar Contramedidas</button>
+        <div id="cyberResults"></div>
+        <h3 style="margin-top:30px;">✅ Checklist de Ciberdefensa</h3>
+        <div id="cyberChecklist"></div>
+    </div>
+</div>
+
+<!-- ============================================================
+     FOOTER
+     ============================================================ -->
+<footer class="footer">
+    <div><span class="highlight">AlphaNet v0.4</span> · Corte 2 · Network Command Center</div>
+    <div>
+        <span class="highlight">●</span> Cisco
+        <span style="margin-left:12px;" class="highlight">●</span> Huawei
+        <span style="margin-left:12px;" class="highlight">●</span> TP-Link
+        <span style="margin-left:12px;" class="highlight">●</span> Fortinet
+        <span style="margin-left:12px;" class="highlight">●</span> MikroTik
+    </div>
+    <div><span style="color:#667788;">Subnetting · Topología · Configuración · Ciberdefensa</span></div>
+</footer>
+
+<script>
+/* ============================================================
+   ALPHANET v0.4 - LÓGICA
+   ============================================================ */
+
+const appState = {
+    currentVendor: 'CISCO',
+    topology: [],
+    lastConfig: '',
+    lastThreatAnalysis: null
+};
+
+const devices = [
+    { name: 'SW-CORE-01', model: 'Catalyst 9500', vendor: 'CISCO', ip: '10.0.0.1', role: 'Core', status: 'online', protocol: 'NETCONF', latency: 2 },
+    { name: 'SW-CORE-02', model: 'Catalyst 9500', vendor: 'CISCO', ip: '10.0.0.2', role: 'Core', status: 'online', protocol: 'NETCONF', latency: 3 },
+    { name: 'SW-DIST-01', model: 'CloudEngine S5731', vendor: 'HUAWEI', ip: '10.0.1.1', role: 'Distribución', status: 'online', protocol: 'RESTCONF', latency: 5 },
+    { name: 'SW-DIST-02', model: 'CloudEngine S5731', vendor: 'HUAWEI', ip: '10.0.1.2', role: 'Distribución', status: 'online', protocol: 'RESTCONF', latency: 4 },
+    { name: 'SW-DIST-03', model: 'CloudEngine S5731', vendor: 'HUAWEI', ip: '10.0.1.3', role: 'Distribución', status: 'warning', protocol: 'RESTCONF', latency: 45 },
+    { name: 'SW-ACCESS-01', model: 'SG350X', vendor: 'CISCO', ip: '10.0.2.1', role: 'Acceso', status: 'online', protocol: 'SSHv2', latency: 8 },
+    { name: 'SW-ACCESS-04', model: 'Archer C9', vendor: 'TPLINK', ip: '10.0.2.4', role: 'Acceso', status: 'online', protocol: 'SSHv2', latency: 12 },
+    { name: 'SW-ACCESS-07', model: 'Archer C9', vendor: 'TPLINK', ip: '10.0.2.7', role: 'Acceso', status: 'warning', protocol: 'SSHv2', latency: 68 },
+    { name: 'FW-PRINCIPAL', model: 'FortiGate 600F', vendor: 'FORTINET', ip: '10.0.0.254', role: 'Firewall', status: 'online', protocol: 'RESTCONF', latency: 3 },
+    { name: 'AP-05', model: 'AirEngine 6760', vendor: 'HUAWEI', ip: '10.0.3.14', role: 'AP', status: 'warning', protocol: 'NETCONF', latency: 72 },
+    { name: 'MK-ROUTER-01', model: 'CCR2004', vendor: 'MIKROTIK', ip: '10.0.0.80', role: 'Router', status: 'online', protocol: 'SSHv2', latency: 6 }
+];
+
+const modelsByVendor = {
+    'CISCO': {
+        'router': ['ISR 4331', 'ISR 4451', 'ASR 1001-X'],
+        'switch-l2': ['Catalyst 2960', 'SG350-28'],
+        'switch-l3': ['Catalyst 9500', 'Nexus 93180'],
+        'firewall': ['ASA 5506-X', 'Firepower 1120'],
+        'ap': ['Aironet 2800', 'Catalyst 9120']
+    },
+    'HUAWEI': {
+        'router': ['AR 2220', 'AR 3260'],
+        'switch-l2': ['S2720-EI', 'S5720-LI'],
+        'switch-l3': ['CloudEngine S5731', 'CloudEngine S6730'],
+        'firewall': ['USG 6000', 'USG 6600'],
+        'ap': ['AirEngine 6760', 'AirEngine 5760']
+    },
+    'TPLINK': {
+        'router': ['TL-ER6120', 'TL-ER7206'],
+        'switch-l2': ['TL-SG1024', 'TL-SG3428'],
+        'switch-l3': ['TL-SG3428X'],
+        'firewall': ['TL-ER8410'],
+        'ap': ['EAP265 HD']
+    },
+    'FORTINET': {
+        'router': ['FortiGate 60F', 'FortiGate 100F'],
+        'switch-l2': ['FortiSwitch 108E'],
+        'switch-l3': ['FortiSwitch 424E'],
+        'firewall': ['FortiGate 600F', 'FortiGate 1800F'],
+        'ap': ['FortiAP 231F']
+    },
+    'MIKROTIK': {
+        'router': ['RB4011', 'CCR2004', 'hEX S'],
+        'switch-l2': ['CRS326'],
+        'switch-l3': ['CRS354'],
+        'firewall': ['RB5009'],
+        'ap': ['hAP ac3', 'cAP ac']
+    }
+};
+
+const templates = [
+    { id: 'tpl-cisco-l3', icon: '🎯', name: 'Switch Capa 3 - Cisco', desc: 'VLANs, routing inter-VLAN, OSPF y SSH.', vendor: 'CISCO' },
+    { id: 'tpl-huawei-l3', icon: '🎯', name: 'Switch Capa 3 - Huawei', desc: 'VLANs, routing inter-VLAN, OSPF.', vendor: 'HUAWEI' },
+    { id: 'tpl-tplink-l3', icon: '🎯', name: 'Switch Capa 3 - TP-Link', desc: 'VLANs y seguridad SSH básica.', vendor: 'TPLINK' },
+    { id: 'tpl-fortinet-fw', icon: '🛡️', name: 'Firewall - Fortinet', desc: 'Políticas, NAT, VPN, filtrado.', vendor: 'FORTINET' },
+    { id: 'tpl-mikrotik-router', icon: '🔀', name: 'Router WAN - MikroTik', desc: 'RouterOS: NAT, firewall, DHCP.', vendor: 'MIKROTIK' },
+    { id: 'tpl-cisco-router', icon: '🔀', name: 'Router WAN - Cisco', desc: 'Encapsulamiento, NAT, OSPF.', vendor: 'CISCO' },
+    { id: 'tpl-huawei-ap', icon: '📡', name: 'Access Point - Huawei', desc: 'SSIDs, WPA3, VLANs.', vendor: 'HUAWEI' },
+    { id: 'tpl-mikrotik-ap', icon: '📡', name: 'Access Point - MikroTik', desc: 'RouterOS wireless: SSID, seguridad.', vendor: 'MIKROTIK' }
+];
+
+const threatsDB = {
+    'ai-recon': {
+        name: 'Reconocimiento con IA',
+        desc: 'Escaneo inteligente de puertos y servicios usando ML para evadir IDS',
+        countermeasures: ['Habilitar Port Security', 'Rate-limiting en puertos no usados', 'Bloquear ICMP echo desde WAN', 'Honeypots', 'Logging de intentos']
+    },
+    'ai-ddos': {
+        name: 'DDoS adaptativo con IA',
+        desc: 'Ataques que se adaptan al tráfico legítimo',
+        countermeasures: ['QoS con límites', 'uRPF', 'Rate-limiting por IP', 'BGP Flowspec', 'Scrubbing center']
+    },
+    'ai-phishing': {
+        name: 'Phishing generativo con IA',
+        desc: 'Correos y sitios falsos indistinguibles',
+        countermeasures: ['Filtrado DNS', 'SPF/DKIM/DMARC', 'Inspección SSL/TLS', 'Bloquear dominios nuevos', 'Capacitación']
+    },
+    'ai-malware': {
+        name: 'Malware polimórfico con IA',
+        desc: 'Malware que cambia firma en cada ejecución',
+        countermeasures: ['Microsegmentación', 'EDR/XDR', 'Sandboxing', 'Bloquear SMB en WAN', 'Zero Trust']
+    }
+};
+
+/* ============================================================
+   INICIALIZACIÓN
+   ============================================================ */
+window.addEventListener('DOMContentLoaded', function() {
+    try {
+        renderDevices();
+        renderLatency();
+        renderVlans();
+        renderInterfaces();
+        renderTemplates();
+        updateModelList();
+        updateTimestamp();
+        renderCyberChecklist(false);
+
+        // Listeners del modal
+        const modal = document.getElementById('infoModal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === e.currentTarget) closeModal();
+            });
+        }
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // Intervalos
+        setInterval(() => {
+            devices.forEach(d => {
+                if (d.status !== 'offline') {
+                    const variation = Math.floor(Math.random() * 6) - 3;
+                    d.latency = Math.max(1, d.latency + variation);
+                }
+            });
+            renderLatency();
+        }, 15000);
+
+        setInterval(updateTimestamp, 30000);
+
+        addTerminalLine('✅ AlphaNet v0.4 listo', 'success');
+        addTerminalLine('📐 Módulo Subnetting disponible', 'info');
+        addTerminalLine('🗺️ Módulo Topología WAN disponible', 'info');
+        addTerminalLine('🛡️ Módulo Ciberdefensa IA disponible', 'info');
+        addTerminalLine('🏭 5 fabricantes soportados', 'info');
+    } catch (err) {
+        console.error('Error en inicialización:', err);
+    }
+});
+
+/* ============================================================
+   NAVEGACIÓN
+   ============================================================ */
+function switchTab(tabName, btn) {
+    document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(t => t.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const target = document.getElementById('tab-' + tabName);
+    if (target) target.classList.add('active');
+}
+
+/* ============================================================
+   TIMESTAMP
+   ============================================================ */
+function updateTimestamp() {
+    const el = document.getElementById('lastUpdate');
+    if (el) el.textContent = new Date().toISOString().replace('T', ' ').slice(0, 19) + ' UTC';
+}
+
+/* ============================================================
+   DASHBOARD: DISPOSITIVOS
+   ============================================================ */
+function renderDevices() {
+    const tbody = document.getElementById('deviceTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    let online = 0, warning = 0, offline = 0;
+
+    devices.forEach(device => {
+        if (device.status === 'online') online++;
+        else if (device.status === 'warning') warning++;
+        else offline++;
+
+        const statusMap = {
+            'online': '<span class="status-badge status-online">● Activo</span>',
+            'warning': '<span class="status-badge status-warning">⚠ Alerta</span>',
+            'offline': '<span class="status-badge status-offline">● Inactivo</span>'
+        };
+        const vendorMap = {
+            'CISCO': 'tag-cisco', 'HUAWEI': 'tag-huawei', 'TPLINK': 'tag-tplink',
+            'FORTINET': 'tag-fortinet', 'MIKROTIK': 'tag-mikrotik'
+        };
+
+        let latencyColor = '#00ff88';
+        let latencyText = device.latency + ' ms';
+        if (device.latency > 50 && device.latency < 100) { latencyColor = '#ffcc00'; latencyText = device.latency + ' ms ⚠'; }
+        else if (device.latency >= 100) { latencyColor = '#ff3344'; latencyText = device.latency + ' ms ❌'; }
+
+        const row = document.createElement('tr');
+        row.innerHTML = 
+            '<td><strong>' + device.name + '</strong></td>' +
+            '<td>' + device.model + '</td>' +
+            '<td><span class="vendor-tag ' + (vendorMap[device.vendor] || 'tag-generic') + '">' + device.vendor + '</span></td>' +
+            '<td>' + device.ip + '</td>' +
+            '<td>' + device.role + '</td>' +
+            '<td>' + statusMap[device.status] + '</td>' +
+            '<td style="color:' + latencyColor + '; font-weight:bold;">' + latencyText + '</td>' +
+            '<td><button class="btn btn-small" onclick="deviceAction(\'' + device.name + '\')">Auditar</button></td>';
+        tbody.appendChild(row);
+    });
+
+    const set = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+    set('totalDevices', devices.length);
+    set('onlineCount', online);
+    set('warningCount', warning);
+    set('offlineCount', offline);
+}
+
+/* ============================================================
+   DASHBOARD: LATENCIA
+   ============================================================ */
+function renderLatency() {
+    const grid = document.getElementById('latencyGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    const displayDevices = devices.slice(0, 8);
+    let totalLatency = 0, count = 0;
+
+    displayDevices.forEach(device => {
+        if (device.latency < 100) { totalLatency += device.latency; count++; }
+        const latencyClass = device.latency < 20 ? 'latency-good' :
+                            device.latency < 50 ? 'latency-medium' : 'latency-bad';
+        const fillWidth = Math.min((device.latency / 50) * 100, 100);
+
+        const item = document.createElement('div');
+        item.className = 'latency-item ' + latencyClass;
+        item.innerHTML = 
+            '<div class="device-name">' + device.name + '</div>' +
+            '<div class="latency-value">' + device.latency + '</div>' +
+            '<div class="latency-unit">ms</div>' +
+            '<div class="latency-bar"><div class="fill" style="width:' + fillWidth + '%;"></div></div>';
+        grid.appendChild(item);
+    });
+
+    const avg = count > 0 ? Math.round(totalLatency / count) : 0;
+    const avgEl = document.getElementById('avgLatency');
+    if (avgEl) avgEl.textContent = avg + ' ms';
+
+    let statusText, statusColor;
+    if (avg < 15) { statusText = '✅ Excelente - Red muy rápida'; statusColor = '#00ff88'; }
+    else if (avg < 30) { statusText = '👍 Buena - Rendimiento óptimo'; statusColor = '#88ff66'; }
+    else if (avg < 50) { statusText = '⚠️ Aceptable - Puede mejorar'; statusColor = '#ffcc00'; }
+    else { statusText = '🔴 Lenta - Revisar infraestructura'; statusColor = '#ff3344'; }
+
+    const statusEl = document.getElementById('latencyStatus');
+    if (statusEl) statusEl.innerHTML = '<span style="color:' + statusColor + ';">' + statusText + '</span>';
+}
+
+/* ============================================================
+   TERMINAL
+   ============================================================ */
+function addTerminalLine(text, type) {
+    type = type || 'info';
+    const terminal = document.getElementById('terminal');
+    if (!terminal) return;
+    const line = document.createElement('div');
+    line.className = 'line';
+    line.innerHTML = '<span class="prompt">[alpha@orchestrator]</span> <span class="info">$</span> <span class="' + type + '"> ' + text + '</span>';
+    terminal.appendChild(line);
+    terminal.scrollTop = terminal.scrollHeight;
+    while (terminal.children.length > 20) terminal.removeChild(terminal.firstChild);
+}
+
+/* ============================================================
+   ACCIONES
+   ============================================================ */
+function deviceAction(name) {
+    const device = devices.find(d => d.name === name);
+    if (device) {
+        addTerminalLine('🔍 Auditando: ' + device.name + ' (' + device.ip + ')', 'info');
+        setTimeout(() => {
+            addTerminalLine('   ✓ Estado: ' + device.status.toUpperCase() + ' · Latencia: ' + device.latency + 'ms', 'success');
+        }, 400);
+    }
+}
+
+/* ============================================================
+   MODAL
+   ============================================================ */
+function showModal(title, body) {
+    const modal = document.getElementById('infoModal');
+    const titleEl = document.getElementById('modalTitle');
+    const bodyEl = document.getElementById('modalBody');
+    if (!modal || !titleEl || !bodyEl) return;
+    titleEl.textContent = title;
+    bodyEl.innerHTML = body;
+    modal.classList.add('active');
+}
+function closeModal() {
+    const modal = document.getElementById('infoModal');
+    if (modal) modal.classList.remove('active');
+}
+
+function showDeviceInfo() {
+    const online = document.getElementById('onlineCount')?.textContent || '0';
+    const warning = document.getElementById('warningCount')?.textContent || '0';
+    const offline = document.getElementById('offlineCount')?.textContent || '0';
+    const total = parseInt(online) + parseInt(warning) + parseInt(offline);
+    showModal('📊 Estado de Dispositivos', 
+        '<p><strong>Total gestionados:</strong> ' + total + '</p>' +
+        '<p style="color:#00ff88;">✅ Activos: ' + online + '</p>' +
+        '<p style="color:#ffcc00;">⚠ Alertas: ' + warning + '</p>' +
+        '<p style="color:#ff3344;">❌ Inactivos: ' + offline + '</p>' +
+        '<hr style="border-color:#1a2a33; margin:10px 0;">' +
+        '<p style="color:#667788;">Disponibilidad: ' + (total > 0 ? Math.round((online/total)*100) : 0) + '%</p>'
+    );
+}
+function showVendorInfo() {
+    const vendors = {};
+    devices.forEach(d => { vendors[d.vendor] = (vendors[d.vendor] || 0) + 1; });
+    let html = '<p><strong>Distribución por fabricante:</strong></p>';
+    for (const v in vendors) html += '<p>● ' + v + ': ' + vendors[v] + '</p>';
+    showModal('🏭 Fabricantes', html);
+}
+function showProtocolInfo() {
+    showModal('🔌 Protocolos Activos', 
+        '<p>● NETCONF: 12 dispositivos</p>' +
+        '<p>● RESTCONF: 8 dispositivos</p>' +
+        '<p>● SSHv2: 10 dispositivos</p>' +
+        '<p style="color:#00ff88; margin-top:10px;">🔐 AES-256 · TLS 1.3</p>'
+    );
+}
+function showBandwidthInfo() {
+    showModal('📶 Ancho de Banda', 
+        '<p><strong>Total:</strong> 1.2 Tbps</p>' +
+        '<p style="color:#00ff88;">▲ Usado: 34%</p>' +
+        '<p style="color:#ffcc00;">⚠ 2 enlaces al 85%</p>' +
+        '<p style="color:#667788;">Disponible: 792 Gbps</p>'
+    );
+}
+
+function executeAction(action) {
+    const actions = {
+        'deploy': { msg: '▶ Desplegando configuración...', steps: ['✓ Validada', '✓ Backup creado', '✓ Aplicada a 27 dispositivos'] },
+        'audit': { msg: '🔍 Auditando seguridad...', steps: ['✓ 802.1X activo', '⚠ 3 intentos bloqueados', '✓ Reporte generado'] },
+        'backup': { msg: '💾 Backup en curso...', steps: ['✓ 30 backups completados', '✓ Archivo: backup.tar.gz'] },
+        'rollback': { msg: '🚨 ROLLBACK activado...', steps: ['✓ Revirtiendo cambios', '✓ Estado restaurado'] }
+    };
+    const data = actions[action];
+    if (!data) return;
+    addTerminalLine(data.msg, 'info');
+    data.steps.forEach((step, i) => {
+        setTimeout(() => {
+            const type = step.indexOf('✓') >= 0 ? 'success' : step.indexOf('⚠') >= 0 ? 'warning' : 'info';
+            addTerminalLine('   ' + step, type);
+        }, 600 + i * 500);
+    });
+}
+
+/* ============================================================
+   CONFIG MANAGER
+   ============================================================ */
+function selectVendor(vendor, btn) {
+    appState.currentVendor = vendor;
+    document.querySelectorAll('.vendor-btn').forEach(b => b.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    updateModelList();
+    const info = document.getElementById('vendorInfo');
+    if (info) info.innerHTML = 'Fabricante: <strong>' + vendor + '</strong>';
+    addTerminalLine('🏭 Fabricante: ' + vendor, 'info');
+}
+
+function updateModelList() {
+    const typeEl = document.getElementById('deviceType');
+    const modelSelect = document.getElementById('deviceModel');
+    if (!typeEl || !modelSelect) return;
+    const type = typeEl.value;
+    modelSelect.innerHTML = '<option>Seleccione modelo...</option>';
+    const models = (modelsByVendor[appState.currentVendor] || {})[type] || [];
+    models.forEach(m => {
+        const opt = document.createElement('option');
+        opt.value = m;
+        opt.textContent = m;
+        modelSelect.appendChild(opt);
+    });
+}
+
+function switchConfigPanel(panelName, btn) {
+    document.querySelectorAll('.config-tab').forEach(t => t.classList.remove('active'));
+    document.querySelectorAll('.config-panel').forEach(p => p.classList.remove('active'));
+    if (btn) btn.classList.add('active');
+    const panel = document.getElementById('panel-' + panelName);
+    if (panel) panel.classList.add('active');
+}
+
+const defaultVlans = [
+    { id: 10, name: 'INGENIERIA', desc: 'Departamento de Ingeniería' },
+    { id: 20, name: 'RRHH', desc: 'Recursos Humanos' },
+    { id: 30, name: 'INVITADOS', desc: 'Red de invitados' }
+];
+function renderVlans() {
+    const tbody = document.getElementById('vlanTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    defaultVlans.forEach(v => addVlanRow(v.id, v.name, v.desc, false));
+}
+function addVlanRow(id, name, desc, update) {
+    if (id === undefined) id = '';
+    if (name === undefined) name = '';
+    if (desc === undefined) desc = '';
+    if (update === undefined) update = true;
+    const tbody = document.getElementById('vlanTableBody');
+    if (!tbody) return;
+    const row = document.createElement('tr');
+    row.innerHTML = 
+        '<td><input type="number" value="' + id + '" placeholder="10"></td>' +
+        '<td><input type="text" value="' + name + '" placeholder="INGENIERIA"></td>' +
+        '<td><input type="text" value="' + desc + '" placeholder="Departamento"></td>' +
+        '<td><button class="btn-remove" onclick="this.closest(\'tr\').remove()">✕</button></td>';
+    tbody.appendChild(row);
+}
+
+const defaultInterfaces = [
+    { name: 'Gi1/0/1', mode: 'access', vlans: '10', desc: 'PC Ingeniería' },
+    { name: 'Gi1/0/2', mode: 'access', vlans: '20', desc: 'PC RRHH' },
+    { name: 'Gi1/0/24', mode: 'trunk', vlans: '10,20,30', desc: 'Uplink a Core' }
+];
+function renderInterfaces() {
+    const tbody = document.getElementById('interfaceTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+    defaultInterfaces.forEach(i => addInterfaceRow(i.name, i.mode, i.vlans, i.desc, false));
+}
+function addInterfaceRow(name, mode, vlans, desc, update) {
+    if (name === undefined) name = '';
+    if (mode === undefined) mode = 'access';
+    if (vlans === undefined) vlans = '';
+    if (desc === undefined) desc = '';
+    const tbody = document.getElementById('interfaceTableBody');
+    if (!tbody) return;
+    const row = document.createElement('tr');
+    row.innerHTML = 
+        '<td><input type="text" value="' + name + '" placeholder="Gi1/0/1"></td>' +
+        '<td><select style="background:#060b10;border:1px solid #1a2a33;color:#e0e8f0;padding:4px 8px;border-radius:4px;font-size:0.75rem;width:100%;">' +
+            '<option value="access"' + (mode === 'access' ? ' selected' : '') + '>Access</option>' +
+            '<option value="trunk"' + (mode === 'trunk' ? ' selected' : '') + '>Trunk</option>' +
+        '</select></td>' +
+        '<td><input type="text" value="' + vlans + '" placeholder="10 o 10,20,30"></td>' +
+        '<td><input type="text" value="' + desc + '" placeholder="Descripción"></td>' +
+        '<td><button class="btn-remove" onclick="this.closest(\'tr\').remove()">✕</button></td>';
+    tbody.appendChild(row);
+}
+
+/* ============================================================
+   GENERAR CONFIGURACIÓN (5 fabricantes)
+   ============================================================ */
+function generateConfig() {
+    const hostname = (document.getElementById('cfgHostname') || {}).value || 'DEVICE';
+    const domain = (document.getElementById('cfgDomain') || {}).value || 'empresa.local';
+    const ntp = (document.getElementById('cfgNTP') || {}).value || 'pool.ntp.org';
+    const dns1 = (document.getElementById('cfgDNS1') || {}).value || '8.8.8.8';
+    const dns2 = (document.getElementById('cfgDNS2') || {}).value || '8.8.4.4';
+    const adminUser = (document.getElementById('cfgAdminUser') || {}).value || 'admin';
+    const banner = (document.getElementById('cfgBanner') || {}).value || 'Acceso restringido';
+    const routing = (document.getElementById('cfgRouting') || {}).value || 'ospf';
+    const routingArea = (document.getElementById('cfgRoutingArea') || {}).value || '0.0.0.0';
+    const networks = (document.getElementById('cfgNetworks') || {}).value || '10.0.0.0/24';
+    const radius = (document.getElementById('cfgRadius') || {}).value || '10.0.0.50';
+    const dot1x = (document.getElementById('cfgDot1x') || {}).value || 'enabled';
+
+    const vlans = [];
+    document.querySelectorAll('#vlanTableBody tr').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        if (inputs[0] && inputs[0].value) vlans.push({ id: inputs[0].value, name: inputs[1].value, desc: inputs[2].value });
+    });
+
+    const interfaces = [];
+    document.querySelectorAll('#interfaceTableBody tr').forEach(row => {
+        const inputs = row.querySelectorAll('input');
+        const mode = row.querySelector('select') ? row.querySelector('select').value : 'access';
+        if (inputs[0] && inputs[0].value) {
+            interfaces.push({ name: inputs[0].value, mode: mode, vlans: inputs[1] ? inputs[1].value : '', desc: inputs[2] ? inputs[2].value : '' });
+        }
+    });
+
+    let config = '';
+    const v = appState.currentVendor;
+
+    if (v === 'CISCO') config = genCisco(hostname, domain, ntp, dns1, dns2, adminUser, banner, vlans, interfaces, routing, routingArea, networks, radius, dot1x);
+    else if (v === 'HUAWEI') config = genHuawei(hostname, domain, ntp, dns1, dns2, adminUser, banner, vlans, interfaces, routing, routingArea, networks, radius, dot1x);
+    else if (v === 'TPLINK') config = genTPLink(hostname, domain, vlans, interfaces, adminUser);
+    else if (v === 'FORTINET') config = genFortinet(hostname, ntp, dns1, dns2, adminUser, vlans, interfaces);
+    else if (v === 'MIKROTIK') config = genMikroTik(hostname, dns1, dns2, adminUser, vlans, interfaces);
+
+    appState.lastConfig = config;
+    const preview = document.getElementById('codePreview');
+    if (preview) preview.textContent = config;
+    switchConfigPanel('preview', document.querySelectorAll('.config-tab')[5]);
+    addTerminalLine('⚡ Configuración ' + v + ' generada', 'success');
+}
+
+function cidrToMask(cidr) {
+    const mask = cidr === 0 ? 0 : (0xFFFFFFFF << (32 - cidr)) >>> 0;
+    return [(mask >>> 24) & 0xFF, (mask >>> 16) & 0xFF, (mask >>> 8) & 0xFF, mask & 0xFF].join('.');
+}
+function ipToInt(ip) {
+    return ip.split('.').reduce((acc, octet) => (acc << 8) + parseInt(octet), 0) >>> 0;
+}
+function intToIp(int) {
+    return [(int >>> 24) & 0xFF, (int >>> 16) & 0xFF, (int >>> 8) & 0xFF, int & 0xFF].join('.');
+}
+function getIpClass(firstOctet) {
+    if (firstOctet < 128) return 'A';
+    if (firstOctet < 192) return 'B';
+    if (firstOctet < 224) return 'C';
+    if (firstOctet < 240) return 'D (Multicast)';
+    return 'E (Experimental)';
+}
+function isPrivateIP(firstOctet, secondOctet) {
+    if (firstOctet === 10) return true;
+    if (firstOctet === 172 && secondOctet >= 16 && secondOctet <= 31) return true;
+    if (firstOctet === 192 && secondOctet === 168) return true;
+    return false;
+}
+
+function genCisco(hostname, domain, ntp, dns1, dns2, adminUser, banner, vlans, interfaces, routing, routingArea, networks, radius, dot1x) {
+    let c = '! ============================================\n! AlphaNet v0.4 - Cisco IOS\n! Dispositivo: ' + hostname + '\n! Fecha: ' + new Date().toISOString().slice(0,19) + '\n! ============================================\n\n';
+    c += 'enable\nconfigure terminal\n\n';
+    c += 'hostname ' + hostname + '\nip domain-name ' + domain + '\nip name-server ' + dns1 + '\nip name-server ' + dns2 + '\nntp server ' + ntp + '\nbanner motd #' + banner + '#\n\n';
+    c += '! --- VLANs ---\n';
+    vlans.forEach(v => { c += 'vlan ' + v.id + '\n name ' + v.name + '\n'; });
+    c += '\n! --- Interfaces ---\n';
+    interfaces.forEach(i => {
+        c += 'interface ' + i.name + '\n description ' + i.desc + '\n';
+        if (i.mode === 'access') c += ' switchport mode access\n switchport access vlan ' + i.vlans + '\n';
+        else c += ' switchport mode trunk\n switchport trunk allowed vlan ' + i.vlans + '\n';
+        c += ' no shutdown\n\n';
+    });
+    if (routing === 'ospf') {
+        c += 'router ospf 1\n';
+        networks.split(',').forEach(n => {
+            const parts = n.trim().split('/');
+            if (parts[0]) c += ' network ' + parts[0] + ' 0.0.0.255 area ' + routingArea + '\n';
+        });
+        c += '\n';
+    }
+    c += '! --- Seguridad ---\n';
+    c += 'username ' + adminUser + ' privilege 15 secret CambiarEstaClave123!\nip ssh version 2\nline vty 0 4\n transport input ssh\n login local\n\n';
+    if (dot1x === 'enabled') {
+        c += 'aaa new-model\naaa authentication dot1x default group radius\ndot1x system-auth-control\n';
+        c += 'radius server RADIUS-SRV\n address ipv4 ' + radius + ' auth-port 1812 acct-port 1813\n key SecretKey123\n\n';
+    }
+    c += 'end\nwrite memory\n';
+    return c;
+}
+
+function genHuawei(hostname, domain, ntp, dns1, dns2, adminUser, banner, vlans, interfaces, routing, routingArea, networks, radius, dot1x) {
+    let c = '# ============================================\n# AlphaNet v0.4 - Huawei VRP\n# Dispositivo: ' + hostname + '\n# ============================================\n\n';
+    c += 'system-view\n\n';
+    c += 'sysname ' + hostname + '\nip domain-name ' + domain + '\ndns resolve\ndns server ' + dns1 + '\ndns server ' + dns2 + '\nntp-service unicast-server ' + ntp + '\nheader login information "' + banner + '"\n\n';
+    c += '# --- VLANs ---\n';
+    vlans.forEach(v => { c += 'vlan ' + v.id + '\n description ' + v.name + '\nquit\n'; });
+    c += '\n# --- Interfaces ---\n';
+    interfaces.forEach(i => {
+        c += 'interface ' + i.name + '\n description ' + i.desc + '\n';
+        if (i.mode === 'access') c += ' port link-type access\n port default vlan ' + i.vlans + '\n';
+        else c += ' port link-type trunk\n port trunk allow-pass vlan ' + i.vlans.replace(/,/g, ' ') + '\n';
+        c += ' undo shutdown\nquit\n\n';
+    });
+    if (routing === 'ospf') {
+        c += 'ospf 1\n area ' + routingArea + '\n';
+        networks.split(',').forEach(n => {
+            const parts = n.trim().split('/');
+            if (parts[0]) c += '  network ' + parts[0] + ' 0.0.0.255\n';
+        });
+        c += ' quit\nquit\n\n';
+    }
+    c += '# --- Seguridad ---\n';
+    c += 'aaa\n local-user ' + adminUser + ' password irreversible-cipher CambiarEstaClave123!\n local-user ' + adminUser + ' privilege level 15\n local-user ' + adminUser + ' service-type ssh\nquit\nstelnet server enable\nssh user ' + adminUser + ' authentication-type password\n\n';
+    if (dot1x === 'enabled') {
+        c += 'dot1x enable\nradius-server template RADIUS-SRV\n radius-server shared-key cipher SecretKey123\n radius-server authentication ' + radius + ' 1812\nquit\n\n';
+    }
+    c += 'return\nsave\nY\n';
+    return c;
+}
+
+function genTPLink(hostname, domain, vlans, interfaces, adminUser) {
+    let c = '! ============================================\n! AlphaNet v0.4 - TP-Link\n! Dispositivo: ' + hostname + '\n! ============================================\n\n';
+    c += 'configure\n\nhostname ' + hostname + '\nip domain-name ' + domain + '\n\n';
+    c += '! --- VLANs ---\n';
+    vlans.forEach(v => { c += 'vlan ' + v.id + '\n name ' + v.name + '\n description ' + v.desc + '\n'; });
+    c += '\n! --- Interfaces ---\n';
+    interfaces.forEach(i => {
+        c += 'interface ' + i.name + '\n description ' + i.desc + '\n';
+        if (i.mode === 'access') c += ' switchport mode access\n switchport access vlan ' + i.vlans + '\n';
+        else c += ' switchport mode trunk\n switchport trunk allowed vlan ' + i.vlans + '\n';
+        c += '\n';
+    });
+    c += 'user ' + adminUser + ' privilege 15 secret CambiarEstaClave123!\n\nend\ncopy running-config startup-config\n';
+    return c;
+}
+
+function genFortinet(hostname, ntp, dns1, dns2, adminUser, vlans, interfaces) {
+    let c = '# ============================================\n# AlphaNet v0.4 - Fortinet FortiOS\n# Dispositivo: ' + hostname + '\n# ============================================\n\n';
+    c += 'config system global\n set hostname "' + hostname + '"\n set timezone 26\nend\n\n';
+    c += 'config system dns\n set primary ' + dns1 + '\n set secondary ' + dns2 + '\nend\n\n';
+    c += 'config system ntp\n set ntpsync enable\n config ntpserver\n  edit 1\n   set server "' + ntp + '"\n  next\n end\nend\n\n';
+    c += '# --- Interfaces / VLANs ---\n';
+    interfaces.forEach(i => {
+        c += 'config system interface\n edit "' + i.name + '"\n  set alias "' + i.desc + '"\n';
+        if (i.vlans) c += '  set vlanid ' + i.vlans.split(',')[0] + '\n';
+        c += '  set status up\n next\nend\n\n';
+    });
+    c += 'config system admin\n edit "' + adminUser + '"\n  set password CambiarEstaClave123!\n next\nend\n';
+    return c;
+}
+
+function genMikroTik(hostname, dns1, dns2, adminUser, vlans, interfaces) {
+    let c = '# ============================================\n# AlphaNet v0.4 - MikroTik RouterOS\n# Dispositivo: ' + hostname + '\n# ============================================\n\n';
+    c += '/system identity set name="' + hostname + '"\n';
+    c += '/ip dns set servers=' + dns1 + ',' + dns2 + ' allow-remote-requests=yes\n\n';
+    c += '# --- VLANs ---\n';
+    vlans.forEach(v => { c += '/interface vlan add name="vlan' + v.id + '-' + v.name + '" vlan-id=' + v.id + ' interface=ether1 comment="' + v.desc + '"\n'; });
+    c += '\n# --- Seguridad ---\n';
+    c += '/user add name=' + adminUser + ' password=CambiarEstaClave123! group=full\n';
+    c += '/ip service disable telnet,ftp\n/ip service set ssh port=22\n';
+    c += '/ip firewall filter\nadd chain=input action=accept connection-state=established,related\nadd chain=input action=accept protocol=tcp dst-port=22\nadd chain=input action=drop in-interface=ether1\n\n';
+    c += '/ip firewall nat\nadd chain=srcnat action=masquerade out-interface=ether1\n';
+    return c;
+}
+
+function validateConfig() {
+    addTerminalLine('🔍 Validando sintaxis...', 'info');
+    setTimeout(() => addTerminalLine('   ✓ Sintaxis ' + appState.currentVendor + ' OK', 'success'), 800);
+}
+function saveTemplate() { addTerminalLine('💾 Plantilla guardada', 'success'); }
+function clearConfig() {
+    if (confirm('¿Limpiar la configuración?')) {
+        const el = document.getElementById('codePreview');
+        if (el) el.textContent = 'Haga clic en "Generar Configuración" para ver la sintaxis generada.';
+        addTerminalLine('🗑️ Configuración limpiada', 'warning');
+    }
+}
+
+function renderTemplates() {
+    const grid = document.getElementById('templateGrid');
+    if (!grid) return;
+    grid.innerHTML = '';
+    templates.forEach(tpl => {
+        const card = document.createElement('div');
+        card.className = 'template-card';
+        card.onclick = () => loadTemplate(tpl.id);
+        card.innerHTML = 
+            '<div class="template-icon">' + tpl.icon + '</div>' +
+            '<div class="template-name">' + tpl.name + '</div>' +
+            '<div class="template-desc">' + tpl.desc + '</div>' +
+            '<div class="template-vendor">' + tpl.vendor + '</div>';
+        grid.appendChild(card);
+    });
+}
+function loadTemplate(tplId) {
+    const tpl = templates.find(t => t.id === tplId);
+    if (!tpl) return;
+    addTerminalLine('📋 Cargando plantilla: ' + tpl.name, 'info');
+    setTimeout(() => {
+        addTerminalLine('   ✓ Plantilla cargada', 'success');
+        switchTab('config', document.querySelectorAll('.tab')[1]);
+    }, 500);
+}
+
+function deployAction(type) {
+    const msgs = { 'single': '🎯 Desplegando a 1 dispositivo...', 'group': '📦 Desplegando a grupo...', 'massive': '🌐 Despliegue masivo iniciado...', 'schedule': '⏰ Programando despliegue...' };
+    const terminal = document.getElementById('deployTerminal');
+    if (!terminal) return;
+    const line = document.createElement('div');
+    line.className = 'line';
+    line.innerHTML = '<span class="prompt">[deploy@orchestrator]</span> <span class="info">$</span> ' + (msgs[type] || 'Acción');
+    terminal.appendChild(line);
+    terminal.scrollTop = terminal.scrollHeight;
+}
+
+/* ============================================================
+   SUBNETTING
+   ============================================================ */
+function calcularSubnetting() {
+    const inputEl = document.getElementById('ipInput');
+    const resultEl = document.getElementById('subnetResults');
+    if (!inputEl || !resultEl) return;
+    const input = inputEl.value.trim();
+    const match = input.match(/^(\d+\.\d+\.\d+\.\d+)\/(\d+)$/);
+    if (!match) { resultEl.innerHTML = '<div class="alert alert-danger">❌ Formato inválido. Use: IP/prefijo (ej: 192.168.1.10/24)</div>'; return; }
+    const ip = match[1];
+    const cidr = parseInt(match[2]);
+    if (cidr < 0 || cidr > 32) { resultEl.innerHTML = '<div class="alert alert-danger">❌ Prefijo entre 0 y 32</div>'; return; }
+    const ipParts = ip.split('.').map(Number);
+    if (ipParts.some(p => p < 0 || p > 255)) { resultEl.innerHTML = '<div class="alert alert-danger">❌ Cada octeto entre 0 y 255</div>'; return; }
+
+    const ipInt = ipToInt(ip);
+    const maskInt = cidr === 0 ? 0 : (0xFFFFFFFF << (32 - cidr)) >>> 0;
+    const networkInt = (ipInt & maskInt) >>> 0;
+    const broadcastInt = (networkInt | (~maskInt >>> 0)) >>> 0;
+    const firstHostInt = cidr < 31 ? networkInt + 1 : networkInt;
+    const lastHostInt = cidr < 31 ? broadcastInt - 1 : broadcastInt;
+    const totalHosts = Math.pow(2, 32 - cidr);
+    const usableHosts = cidr < 31 ? totalHosts - 2 : totalHosts;
+    const ipClass = getIpClass(ipParts[0]);
+    const isPrivate = isPrivateIP(ipParts[0], ipParts[1]);
+
+    resultEl.innerHTML = 
+        '<div class="result-box">' +
+            '<div><span class="label">IP introducida:</span> <span class="value">' + ip + '/' + cidr + '</span></div>' +
+            '<div><span class="label">Máscara de subred:</span> <span class="value">' + cidrToMask(cidr) + '</span></div>' +
+            '<div><span class="label">Dirección de red:</span> <span class="value">' + intToIp(networkInt) + '/' + cidr + '</span></div>' +
+            '<div><span class="label">Broadcast:</span> <span class="value">' + intToIp(broadcastInt) + '</span></div>' +
+            '<div><span class="label">Primer host:</span> <span class="value">' + intToIp(firstHostInt) + '</span></div>' +
+            '<div><span class="label">Último host:</span> <span class="value">' + intToIp(lastHostInt) + '</span></div>' +
+            '<div><span class="label">Total direcciones:</span> <span class="value">' + totalHosts.toLocaleString() + '</span></div>' +
+            '<div><span class="label">Hosts utilizables:</span> <span class="value">' + usableHosts.toLocaleString() + '</span></div>' +
+            '<div><span class="label">Clase:</span> <span class="value">' + ipClass + '</span></div>' +
+            '<div><span class="label">Tipo:</span> <span class="value">' + (isPrivate ? 'Privada (RFC 1918)' : 'Pública') + '</span></div>' +
+            '<div><span class="label">Wildcard:</span> <span class="value">' + intToIp(~maskInt >>> 0) + '</span></div>' +
+        '</div>';
+}
+
+function calcularVLSM() {
+    const baseEl = document.getElementById('vlsmBase');
+    const hostsEl = document.getElementById('vlsmHosts');
+    const resultEl = document.getElementById('vlsmResults');
+    if (!baseEl || !hostsEl || !resultEl) return;
+    const match = baseEl.value.trim().match(/^(\d+\.\d+\.\d+\.\d+)\/(\d+)$/);
+    if (!match) { resultEl.innerHTML = '<div class="alert alert-danger">❌ Formato de red base inválido</div>'; return; }
+    const baseIp = match[1];
+    const baseCidr = parseInt(match[2]);
+    const hostsReqs = hostsEl.value.split(',').map(h => parseInt(h.trim())).filter(h => !isNaN(h) && h > 0).sort((a, b) => b - a);
+    if (hostsReqs.length === 0) { resultEl.innerHTML = '<div class="alert alert-danger">❌ Ingrese al menos un requerimiento</div>'; return; }
+
+    let subnets = [];
+    let currentIpInt = ipToInt(baseIp);
+    const baseMaskInt = (0xFFFFFFFF << (32 - baseCidr)) >>> 0;
+    const baseEndInt = (currentIpInt | (~baseMaskInt >>> 0)) >>> 0;
+
+    for (let i = 0; i < hostsReqs.length; i++) {
+        const hosts = hostsReqs[i];
+        const totalNeeded = hosts + 2;
+        const bits = Math.ceil(Math.log2(totalNeeded));
+        const newCidr = 32 - bits;
+        const size = Math.pow(2, bits);
+        if (currentIpInt + size - 1 > baseEndInt) { subnets.push({ name: 'Subred ' + (i+1), hosts: hosts, error: 'No cabe en la red base' }); break; }
+        const networkInt = currentIpInt;
+        const broadcastInt = currentIpInt + size - 1;
+        subnets.push({
+            name: 'Subred ' + (i+1), hosts: hosts, cidr: newCidr, mask: cidrToMask(newCidr),
+            network: intToIp(networkInt), broadcast: intToIp(broadcastInt),
+            firstHost: intToIp(networkInt + 1), lastHost: intToIp(broadcastInt - 1)
+        });
+        currentIpInt = broadcastInt + 1;
+    }
+
+    let html = '<div class="result-box"><table style="width:100%;border-collapse:collapse;">';
+    html += '<thead><tr style="background:#060b10;color:#00ffcc;"><th style="padding:8px;">Subred</th><th>Hosts</th><th>CIDR</th><th>Máscara</th><th>Red</th><th>Rango</th><th>Broadcast</th></tr></thead><tbody>';
+    subnets.forEach(s => {
+        if (s.error) html += '<tr><td style="padding:8px;">' + s.name + '</td><td>' + s.hosts + '</td><td colspan="5" style="color:#ff3344;">' + s.error + '</td></tr>';
+        else html += '<tr><td style="padding:8px;">' + s.name + '</td><td>' + s.hosts + '</td><td>/' + s.cidr + '</td><td>' + s.mask + '</td><td>' + s.network + '</td><td>' + s.firstHost + ' - ' + s.lastHost + '</td><td>' + s.broadcast + '</td></tr>';
+    });
+    html += '</tbody></table></div>';
+    resultEl.innerHTML = html;
+}
+
+/* ============================================================
+   TOPOLOGÍA
+   ============================================================ */
+function addDeviceToTopology() {
+    const name = (document.getElementById('topoName') || {}).value?.trim() || '';
+    const vendor = (document.getElementById('topoVendor') || {}).value || 'CISCO';
+    const type = (document.getElementById('topoType') || {}).value || 'router';
+    const ip = (document.getElementById('topoIP') || {}).value?.trim() || '';
+    const wan = (document.getElementById('topoWAN') || {}).value?.trim() || '';
+    const lan = (document.getElementById('topoLAN') || {}).value?.trim() || '';
+    if (!name || !ip) { alert('⚠️ Debes completar Nombre e IP'); return; }
+    appState.topology.push({ name, vendor, type, ip, wan, lan });
+    ['topoName','topoIP','topoWAN','topoLAN'].forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    renderTopology();
+    updateConfigDeviceList();
+    addTerminalLine('➕ Dispositivo agregado: ' + name + ' (' + vendor + ')', 'success');
+}
+
+function renderTopology() {
+    const div = document.getElementById('topologyTable');
+    if (!div) return;
+    if (appState.topology.length === 0) { div.innerHTML = '<div class="alert alert-warning">⚠️ No hay dispositivos cargados</div>'; return; }
+    let html = '<table class="vlan-table"><thead><tr><th>#</th><th>Nombre</th><th>Fabricante</th><th>Tipo</th><th>IP</th><th>WAN</th><th>LAN</th><th>Acción</th></tr></thead><tbody>';
+    appState.topology.forEach((d, i) => {
+        const tagClass = 'tag-' + d.vendor.toLowerCase();
+        html += '<tr><td>' + (i+1) + '</td><td><strong>' + d.name + '</strong></td>' +
+            '<td><span class="vendor-tag ' + tagClass + '">' + d.vendor + '</span></td>' +
+            '<td>' + d.type + '</td><td>' + d.ip + '</td><td>' + (d.wan || '-') + '</td><td>' + (d.lan || '-') + '</td>' +
+            '<td><button class="btn-remove" onclick="removeDevice(' + i + ')">✕</button></td></tr>';
+    });
+    html += '</tbody></table>';
+    div.innerHTML = html;
+}
+
+function removeDevice(index) {
+    appState.topology.splice(index, 1);
+    renderTopology();
+    updateConfigDeviceList();
+}
+
+function loadDemoTopology() {
+    appState.topology = [
+        { name: 'ROUTER-WAN-01', vendor: 'CISCO', type: 'router', ip: '10.0.0.1', wan: '200.1.1.1/30', lan: '192.168.1.1/24' },
+        { name: 'ROUTER-WAN-02', vendor: 'HUAWEI', type: 'router', ip: '10.0.0.2', wan: '200.1.1.5/30', lan: '192.168.2.1/24' },
+        { name: 'FW-PERIMETRAL', vendor: 'FORTINET', type: 'firewall', ip: '10.0.0.254', wan: '200.1.1.9/30', lan: '192.168.0.1/24' },
+        { name: 'SW-CORE-01', vendor: 'CISCO', type: 'switch', ip: '10.0.0.10', wan: '-', lan: '192.168.10.1/24' },
+        { name: 'MK-ROUTER-01', vendor: 'MIKROTIK', type: 'router', ip: '10.0.0.80', wan: '200.1.1.13/30', lan: '192.168.30.1/24' },
+        { name: 'SW-ACCESO-TP', vendor: 'TPLINK', type: 'switch', ip: '10.0.0.90', wan: '-', lan: '192.168.40.1/24' }
+    ];
+    renderTopology();
+    updateConfigDeviceList();
+    addTerminalLine('📋 Topología demo cargada: 6 dispositivos', 'success');
+}
+
+function clearTopology() {
+    if (confirm('¿Borrar toda la topología?')) {
+        appState.topology = [];
+        renderTopology();
+        updateConfigDeviceList();
+        addTerminalLine('🗑️ Topología limpiada', 'warning');
+    }
+}
+
+function updateConfigDeviceList() {
+    const select = document.getElementById('configDevice');
+    if (!select) return;
+    select.innerHTML = '';
+    if (appState.topology.length === 0) { select.innerHTML = '<option value="">Cargue primero una topología...</option>'; return; }
+    appState.topology.forEach((d, i) => {
+        const opt = document.createElement('option');
+        opt.value = i;
+        opt.textContent = d.name + ' (' + d.vendor + ')';
+        select.appendChild(opt);
+    });
+}
+
+function generateConfigFromTopology() {
+    const idxEl = document.getElementById('configDevice');
+    const routingEl = document.getElementById('configRouting');
+    const outEl = document.getElementById('configOutput');
+    if (!idxEl || !outEl) return;
+    const idx = idxEl.value;
+    const routing = routingEl ? routingEl.value : 'ospf';
+    if (idx === '') { outEl.textContent = '⚠️ Carga una topología y selecciona un dispositivo'; return; }
+    const d = appState.topology[parseInt(idx)];
+    let config = '';
+    if (d.vendor === 'CISCO') config = genCiscoRouterFromTopo(d, routing);
+    else if (d.vendor === 'HUAWEI') config = genHuaweiRouterFromTopo(d, routing);
+    else if (d.vendor === 'FORTINET') config = genFortinetFromTopo(d);
+    else if (d.vendor === 'MIKROTIK') config = genMikroTikFromTopo(d);
+    else config = '# Configuración para ' + d.name + ' (' + d.vendor + ')';
+    appState.lastConfig = config;
+    outEl.textContent = config;
+    addTerminalLine('⚡ Configuración generada: ' + d.name, 'success');
+}
+
+function genCiscoRouterFromTopo(d, routing) {
+    let c = '! ============================================\n! AlphaNet v0.4 - Router Cisco\n! ' + d.name + '\n! ============================================\n\n';
+    c += 'enable\nconfigure terminal\n\nhostname ' + d.name + '\nip domain-name empresa.local\n\n';
+    if (d.ip) c += 'interface GigabitEthernet0/0\n description MGMT\n ip address ' + d.ip + ' 255.255.255.0\n no shutdown\nexit\n\n';
+    if (d.wan && d.wan !== '-') { const p = d.wan.split('/'); c += 'interface GigabitEthernet0/1\n description WAN\n ip address ' + p[0] + ' ' + cidrToMask(parseInt(p[1])) + '\n no shutdown\nexit\n\n'; }
+    if (d.lan && d.lan !== '-') { const p = d.lan.split('/'); c += 'interface GigabitEthernet0/2\n description LAN\n ip address ' + p[0] + ' ' + cidrToMask(parseInt(p[1])) + '\n no shutdown\nexit\n\n'; }
+    if (routing === 'ospf' && d.lan && d.lan !== '-') {
+        const net = d.lan.split('/')[0].split('.').slice(0, 3).join('.') + '.0';
+        c += 'router ospf 1\n network ' + net + ' 0.0.0.255 area 0\nexit\n\n';
+    } else if (routing === 'static' && d.wan && d.wan !== '-') c += 'ip route 0.0.0.0 0.0.0.0 ' + d.wan.split('/')[0] + '\n\n';
+    c += 'username admin privilege 15 secret CambiarEstaClave123!\nip ssh version 2\nline vty 0 4\n transport input ssh\n login local\nexit\n\nend\nwrite memory\n';
+    return c;
+}
+
+function genHuaweiRouterFromTopo(d, routing) {
+    let c = '# ============================================\n# AlphaNet v0.4 - Router Huawei\n# ' + d.name + '\n# ============================================\n\nsystem-view\n\nsysname ' + d.name + '\n\n';
+    if (d.ip) c += 'interface GigabitEthernet0/0/0\n ip address ' + d.ip + ' 255.255.255.0\n undo shutdown\nquit\n\n';
+    if (d.wan && d.wan !== '-') { const p = d.wan.split('/'); c += 'interface GigabitEthernet0/0/1\n ip address ' + p[0] + ' ' + cidrToMask(parseInt(p[1])) + '\n undo shutdown\nquit\n\n'; }
+    if (d.lan && d.lan !== '-') { const p = d.lan.split('/'); c += 'interface GigabitEthernet0/0/2\n ip address ' + p[0] + ' ' + cidrToMask(parseInt(p[1])) + '\n undo shutdown\nquit\n\n'; }
+    if (routing === 'ospf' && d.lan && d.lan !== '-') {
+        const net = d.lan.split('/')[0].split('.').slice(0, 3).join('.') + '.0';
+        c += 'ospf 1\n area 0.0.0.0\n  network ' + net + ' 0.0.0.255\n quit\nquit\n\n';
+    }
+    c += 'aaa\n local-user admin password irreversible-cipher CambiarEstaClave123!\n local-user admin privilege level 15\n local-user admin service-type ssh\nquit\nstelnet server enable\n\nreturn\nsave\nY\n';
+    return c;
+}
+
+function genFortinetFromTopo(d) {
+    let c = '# ============================================\n# AlphaNet v0.4 - FortiGate\n# ' + d.name + '\n# ============================================\n\n';
+    c += 'config system global\n set hostname "' + d.name + '"\nend\n\n';
+    if (d.wan && d.wan !== '-') { const p = d.wan.split('/'); c += 'config system interface\n edit "wan1"\n  set ip ' + p[0] + ' ' + cidrToMask(parseInt(p[1])) + '\n  set allowaccess ping https ssh\n next\nend\n\n'; }
+    if (d.lan && d.lan !== '-') { const p = d.lan.split('/'); c += 'config system interface\n edit "internal"\n  set ip ' + p[0] + ' ' + cidrToMask(parseInt(p[1])) + '\n  set allowaccess ping https ssh\n next\nend\n\n'; }
+    c += 'config system admin\n edit "admin"\n  set password CambiarEstaClave123!\n next\nend\n';
+    return c;
+}
+
+function genMikroTikFromTopo(d) {
+    let c = '# ============================================\n# AlphaNet v0.4 - MikroTik RouterOS\n# ' + d.name + '\n# ============================================\n\n';
+    c += '/system identity set name="' + d.name + '"\n\n';
+    if (d.wan && d.wan !== '-') c += '/ip address add address=' + d.wan + ' interface=ether1 comment="WAN"\n';
+    if (d.lan && d.lan !== '-') c += '/ip address add address=' + d.lan + ' interface=ether2 comment="LAN"\n';
+    if (d.ip) c += '/ip address add address=' + d.ip + '/24 interface=ether3 comment="MGMT"\n';
+    c += '\n/user add name=admin password=CambiarEstaClave123! group=full\n';
+    c += '/ip service disable telnet,ftp\n';
+    c += '/ip firewall filter\nadd chain=input action=accept connection-state=established,related\nadd chain=input action=drop in-interface=ether1\n\n';
+    c += '/ip firewall nat\nadd chain=srcnat action=masquerade out-interface=ether1\n';
+    return c;
+}
+
+function copyConfig() {
+    if (!appState.lastConfig) { alert('⚠️ Primero genera una configuración'); return; }
+    navigator.clipboard.writeText(appState.lastConfig).then(() => alert('✅ Configuración copiada')).catch(() => alert('❌ No se pudo copiar'));
+}
+
+function downloadConfig() {
+    if (!appState.lastConfig) { alert('⚠️ Primero genera una configuración'); return; }
+    const blob = new Blob([appState.lastConfig], { type: 'text/plain' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'config_' + Date.now() + '.txt';
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/* ============================================================
+   CIBERDEFENSA
+   ============================================================ */
+function analyzeThreat() {
+    const typeEl = document.getElementById('threatType');
+    const levelEl = document.getElementById('threatLevel');
+    const resultEl = document.getElementById('cyberResults');
+    if (!typeEl || !levelEl || !resultEl) return;
+    const threatType = typeEl.value;
+    const threatLevel = levelEl.value;
+    const threat = threatsDB[threatType];
+    if (appState.topology.length === 0) { resultEl.innerHTML = '<div class="alert alert-warning">⚠️ Carga primero una topología</div>'; return; }
+    const impactMultiplier = { low: 0.3, medium: 0.6, high: 0.85, critical: 1.0 };
+    const impact = Math.round(impactMultiplier[threatLevel] * 100);
+    const devicesAtRisk = Math.round(appState.topology.length * impactMultiplier[threatLevel]);
+    let html = '<div class="alert alert-danger"><strong>🚨 Amenaza: ' + threat.name + '</strong><br>' + threat.desc + '</div>';
+    html += '<div class="result-box">';
+    html += '<div><span class="label">Nivel de riesgo:</span> <span class="value">' + threatLevel.toUpperCase() + '</span></div>';
+    html += '<div><span class="label">Impacto estimado:</span> <span class="value">' + impact + '%</span></div>';
+    html += '<div><span class="label">Dispositivos en riesgo:</span> <span class="value">' + devicesAtRisk + ' de ' + appState.topology.length + '</span></div>';
+    html += '</div>';
+    resultEl.innerHTML = html;
+    appState.lastThreatAnalysis = threatType;
+    addTerminalLine('🔍 Análisis: ' + threat.name, 'warning');
+}
+
+function applyCountermeasures() {
+    if (!appState.lastThreatAnalysis) { alert('⚠️ Primero analiza una amenaza'); return; }
+    const threat = threatsDB[appState.lastThreatAnalysis];
+    const resultEl = document.getElementById('cyberResults');
+    let html = '<div class="alert alert-success"><strong>🛡️ Contramedidas aplicadas contra: ' + threat.name + '</strong></div>';
+    html += '<div class="result-box"><h3 style="color:#00ffcc;margin-bottom:10px;">Recomendaciones:</h3><ol style="padding-left:20px;">';
+    threat.countermeasures.forEach(cm => { html += '<li style="margin-bottom:8px;color:#aabbcc;">' + cm + '</li>'; });
+    html += '</ol></div>';
+    resultEl.innerHTML = html;
+    renderCyberChecklist(true);
+    addTerminalLine('🛡️ Contramedidas aplicadas', 'success');
+}
+
+function renderCyberChecklist(completed) {
+    const items = [
+        'Port Security en switches de acceso',
+        'Rate-limiting en puertos no usados',
+        'SSH v2 habilitado, Telnet deshabilitado',
+        'ACLs restrictivas en interfaces WAN',
+        'uRPF / BGP Flowspec configurado',
+        'SPF, DKIM, DMARC en dominio',
+        'Inspección SSL/TLS activa',
+        'Segmentación de red (VLANs)',
+        'Zero Trust Architecture',
+        'Logging centralizado (Syslog)',
+        'NTP sincronizado',
+        'Backups automáticos'
+    ];
+    let html = '<ul style="list-style:none;padding:0;">';
+    items.forEach(item => {
+        const icon = completed ? '✅' : '⏳';
+        const color = completed ? '#00ff88' : '#667788';
+        html += '<li style="padding:8px;border-bottom:1px solid #1a2a33;color:' + color + ';">' + icon + ' ' + item + '</li>';
+    });
+    html += '</ul>';
+    const el = document.getElementById('cyberChecklist');
+    if (el) el.innerHTML = html;
+}
+</script>
+</body>
+</html>
